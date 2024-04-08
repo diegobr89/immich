@@ -83,6 +83,7 @@ export enum JobName {
   // smart search
   QUEUE_SMART_SEARCH = 'queue-smart-search',
   SMART_SEARCH = 'smart-search',
+  SMART_ALBUMS_UPDATE = 'smart-albums-update',
 
   // XMP sidecars
   QUEUE_SIDECAR = 'queue-sidecar',
@@ -105,6 +106,8 @@ export interface IEntityJob extends IBaseJob {
 export interface IAssetDeletionJob extends IEntityJob {
   fromExternal?: boolean;
 }
+
+export interface ISmartAlbumsUpdateJob extends IEntityJob {}
 
 export interface ILibraryFileJob extends IEntityJob {
   ownerId: string;
@@ -198,6 +201,7 @@ export type JobItem =
   // Smart Search
   | { name: JobName.QUEUE_SMART_SEARCH; data: IBaseJob }
   | { name: JobName.SMART_SEARCH; data: IEntityJob }
+  | { name: JobName.SMART_ALBUMS_UPDATE; data: ISmartAlbumsUpdateJob }
 
   // Filesystem
   | { name: JobName.DELETE_FILES; data: IDeleteFilesJob }

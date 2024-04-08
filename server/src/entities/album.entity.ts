@@ -1,3 +1,4 @@
+import { AlbumSmartSearchEntity } from 'src/entities/album-smart-search.entity';
 import { AssetEntity } from 'src/entities/asset.entity';
 import { SharedLinkEntity } from 'src/entities/shared-link.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -6,10 +7,12 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -68,4 +71,8 @@ export class AlbumEntity {
 
   @Column({ type: 'varchar', default: AssetOrder.DESC })
   order!: AssetOrder;
+
+  @OneToOne(() => AlbumSmartSearchEntity, { nullable: true, cascade: true })
+  @JoinColumn()
+  smartSearch?: AlbumSmartSearchEntity;
 }

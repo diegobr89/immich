@@ -39,6 +39,7 @@
   import { parseUtcDate } from '$lib/utils/date-time';
   import { featureFlags } from '$lib/stores/server-config.store';
   import { handleError } from '$lib/utils/handle-error';
+  import CreateSmartAlbum from '$lib/components/photos-page/actions/create-smart-album.svelte';
 
   const MAX_ASSET_COUNT = 5000;
   let { isViewing: showAssetViewer } = assetViewingStore;
@@ -229,6 +230,9 @@
       <ControlAppBar on:close={() => goto(previousRoute)} backIcon={mdiArrowLeft}>
         <div class="w-full flex-1 pl-4">
           <SearchBar grayTheme={false} searchQuery={terms} />
+        </div>
+        <div slot="trailing">
+          <CreateSmartAlbum assets={searchResultAssets} searchTerms={terms} />
         </div>
       </ControlAppBar>
     </div>

@@ -1,5 +1,6 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { AccessCore, Permission } from 'src/cores/access.core';
+import { FeatureFlag, SystemConfigCore } from 'src/cores/system-config.core';
 import {
   AddUsersDto,
   AlbumCountResponseDto,
@@ -20,19 +21,30 @@ import { UserEntity } from 'src/entities/user.entity';
 import { IAccessRepository } from 'src/interfaces/access.interface';
 import { AlbumAssetCount, AlbumInfoOptions, IAlbumRepository } from 'src/interfaces/album.interface';
 import { IAssetRepository } from 'src/interfaces/asset.interface';
+import { IEntityJob, IJobRepository, JobStatus, QueueName } from 'src/interfaces/job.interface';
+import { IMachineLearningRepository } from 'src/interfaces/machine-learning.interface';
+import { AssetSearchOptions, ISearchRepository, SmartSearchOptions } from 'src/interfaces/search.interface';
+import { ISystemConfigRepository } from 'src/interfaces/system-config.interface';
 import { IUserRepository } from 'src/interfaces/user.interface';
 import { addAssets, removeAssets } from 'src/utils/asset.util';
 
 @Injectable()
 export class AlbumService {
   private access: AccessCore;
+  private configCore: SystemConfigCore;
+
   constructor(
     @Inject(IAccessRepository) private accessRepository: IAccessRepository,
     @Inject(IAlbumRepository) private albumRepository: IAlbumRepository,
     @Inject(IAssetRepository) private assetRepository: IAssetRepository,
     @Inject(IUserRepository) private userRepository: IUserRepository,
+    @Inject(IJobRepository) private jobRepository: IJobRepository,
+    @Inject(ISystemConfigRepository) configRepository: ISystemConfigRepository,
+    @Inject(IMachineLearningRepository) private machineLearning: IMachineLearningRepository,
+    @Inject(ISearchRepository) private searchRepository: ISearchRepository,
   ) {
     this.access = AccessCore.create(accessRepository);
+    this.configCore = SystemConfigCore.create(configRepository);
   }
 
   async getCount(auth: AuthDto): Promise<AlbumCountResponseDto> {
@@ -91,6 +103,7 @@ export class AlbumService {
           endDate: albumMetadata[album.id].endDate,
           assetCount: albumMetadata[album.id].assetCount,
           lastModifiedAssetTimestamp: lastModifiedAsset?.fileModifiedAt,
+          smartSearch: album.smartSearch,
         };
       }),
     );
@@ -126,6 +139,10 @@ export class AlbumService {
       sharedUsers: dto.sharedWithUserIds?.map((value) => ({ id: value }) as UserEntity) ?? [],
       assets: (dto.assetIds || []).map((id) => ({ id }) as AssetEntity),
       albumThumbnailAssetId: dto.assetIds?.[0] || null,
+      smartSearch: {
+        ...dto.smartSearch,
+        persons: dto.smartSearch?.personIds.map((id: string) => ({ id })),
+      },
     });
 
     return mapAlbumWithAssets(album);
@@ -272,5 +289,67 @@ export class AlbumService {
       throw new BadRequestException('Album not found');
     }
     return album;
+  }
+
+  async handleSmartAlbumsUpdate(data: IEntityJob) {
+    await this.jobRepository.waitForQueueCompletion(
+      QueueName.FACE_DETECTION,
+      QueueName.FACIAL_RECOGNITION,
+      QueueName.METADATA_EXTRACTION,
+    );
+
+    const { id: assetId = '' } = data;
+    const asset = await this.assetRepository.getById(assetId);
+
+    const { ownerId: assetOwnerId = '', faces: assetFaces = [] } = { ...asset };
+    const albums = await this.albumRepository.getSmartOwned(assetOwnerId);
+
+    await Promise.all(
+      albums.map(async (album) => {
+        await this.configCore.requireFeature(FeatureFlag.SMART_SEARCH);
+        const { machineLearning } = await this.configCore.getConfig();
+        const userIds = [album.ownerId];
+
+        const smartSearchQuery = album.smartSearch?.query;
+
+        let newAssets: AssetEntity[] = [];
+        if (smartSearchQuery) {
+          const embedding = await this.machineLearning.encodeText(
+            machineLearning.url,
+            { text: album.smartSearch?.query || '' },
+            machineLearning.clip,
+          );
+
+          const page = album.smartSearch?.page ?? 1;
+          const size = album.smartSearch?.size || 100;
+          const { items } = await this.searchRepository.searchSmart({ page, size }, {
+            personIds: album.smartSearch?.persons?.map(({ id }) => id),
+            userIds,
+            embedding,
+          } as SmartSearchOptions);
+          newAssets = items;
+        }
+
+        if (!smartSearchQuery) {
+          const userIds = [album.ownerId];
+
+          const page = album.smartSearch?.page ?? 1;
+          const size = album.smartSearch?.size || 250;
+          const { items } = await this.searchRepository.searchMetadata({ page, size }, {
+            personIds: album.smartSearch?.persons?.map(({ id }) => id),
+            userIds,
+            orderDirection: 'DESC',
+          } as AssetSearchOptions);
+          newAssets = items;
+        }
+
+        await this.albumRepository.addAssetIds(
+          album.id,
+          newAssets.filter((asset) => !album.assets.map(({ id }) => id).includes(asset.id)).map(({ id }) => id),
+        );
+      }),
+    );
+
+    return JobStatus.SUCCESS;
   }
 }

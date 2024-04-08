@@ -7916,6 +7916,9 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "smartSearch": {
+            "type": "object"
           }
         },
         "required": [

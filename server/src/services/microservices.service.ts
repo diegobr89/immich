@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IDeleteFilesJob, JobName } from 'src/interfaces/job.interface';
+import { AlbumService } from 'src/services/album.service';
 import { AssetService } from 'src/services/asset.service';
 import { AuditService } from 'src/services/audit.service';
 import { DatabaseService } from 'src/services/database.service';
@@ -31,6 +32,7 @@ export class MicroservicesService {
     private storageService: StorageService,
     private userService: UserService,
     private databaseService: DatabaseService,
+    private albumService: AlbumService,
   ) {}
 
   async init() {
@@ -77,6 +79,7 @@ export class MicroservicesService {
       [JobName.LIBRARY_REMOVE_OFFLINE]: (data) => this.libraryService.handleOfflineRemoval(data),
       [JobName.LIBRARY_QUEUE_SCAN_ALL]: (data) => this.libraryService.handleQueueAllScan(data),
       [JobName.LIBRARY_QUEUE_CLEANUP]: () => this.libraryService.handleQueueCleanup(),
+      [JobName.SMART_ALBUMS_UPDATE]: (data) => this.albumService.handleSmartAlbumsUpdate(data),
     });
 
     await this.metadataService.init();

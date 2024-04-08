@@ -17,6 +17,7 @@ import {
   type DownloadInfoDto,
   type DownloadResponseDto,
   type UserResponseDto,
+  type SmartSearchDto,
 } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import { get } from 'svelte/store';
@@ -47,12 +48,13 @@ export const addAssetsToAlbum = async (albumId: string, assetIds: string[]) => {
   });
 };
 
-export const addAssetsToNewAlbum = async (albumName: string, assetIds: string[]) => {
+export const addAssetsToNewAlbum = async (albumName: string, assetIds: string[], smartSearch?: SmartSearchDto) => {
   try {
     const album = await createAlbum({
       createAlbumDto: {
         albumName,
         assetIds,
+        smartSearch,
       },
     });
     const displayName = albumName ? `<b>${encodeHTMLSpecialChars(albumName)}</b>` : 'new album';

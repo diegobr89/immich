@@ -31,6 +31,9 @@ export class CreateAlbumDto {
 
   @ValidateUUID({ optional: true, each: true })
   assetIds?: string[];
+
+  @Optional()
+  smartSearch?: any;
 }
 
 export class UpdateAlbumDto {

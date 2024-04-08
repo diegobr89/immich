@@ -35,6 +35,7 @@ export interface IAlbumRepository extends IBulkAsset {
   getMetadataForIds(ids: string[]): Promise<AlbumAssetCount[]>;
   getInvalidThumbnail(): Promise<string[]>;
   getOwned(ownerId: string): Promise<AlbumEntity[]>;
+  getSmartOwned(ownerId: string): Promise<AlbumEntity[]>;
   getShared(ownerId: string): Promise<AlbumEntity[]>;
   getNotShared(ownerId: string): Promise<AlbumEntity[]>;
   restoreAll(userId: string): Promise<void>;

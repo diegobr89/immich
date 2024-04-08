@@ -184,6 +184,15 @@ export class AlbumRepository implements IAlbumRepository {
     });
   }
 
+  @GenerateSql()
+  getSmartOwned(ownerId: string){
+    return this.repository.find({
+      relations: { assets: true, smartSearch: { persons: true } },
+      where: { ownerId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   @GenerateSql({ params: [DummyValue.UUID] })
   async removeAsset(assetId: string): Promise<void> {
     // Using dataSource, because there is no direct access to albums_assets_assets.

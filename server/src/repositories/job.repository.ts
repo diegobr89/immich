@@ -20,6 +20,7 @@ import { ImmichLogger } from 'src/utils/logger';
 
 export const JOBS_TO_QUEUE: Record<JobName, QueueName> = {
   // misc
+  [JobName.SMART_ALBUMS_UPDATE]: QueueName.BACKGROUND_TASK,
   [JobName.ASSET_DELETION]: QueueName.BACKGROUND_TASK,
   [JobName.ASSET_DELETION_CHECK]: QueueName.BACKGROUND_TASK,
   [JobName.USER_DELETE_CHECK]: QueueName.BACKGROUND_TASK,

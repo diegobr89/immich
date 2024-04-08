@@ -88,6 +88,8 @@ export class AssetServiceV1 {
 
       await this.userRepository.updateUsage(auth.user.id, (livePhotoFile?.size || 0) + file.size);
 
+      await this.jobRepository.queue({ name: JobName.SMART_ALBUMS_UPDATE, data: { id: asset.id, source: 'upload' } });
+
       return { id: asset.id, duplicate: false };
     } catch (error: any) {
       // clean up files
